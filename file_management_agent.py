@@ -26,6 +26,7 @@ _OPENAI_API_KEY = load_api_key["openai_api_key"]
 os.environ['OPENAI_API_KEY'] = _OPENAI_API_KEY
 
 reading_dict: Dict[str,str] = {} # Needed for storing all read content
+found_files_list: List[str] = []
 
 # This is needed to identify steps for determining when to terminate conversation
 def generate_local_response(all_messages: List[Dict]) -> str | None:
@@ -48,13 +49,17 @@ def file_management_request( user_input: str) -> List[dict[str, str]] | None:
     # Note: Add all major tool options here for simple steps
     messages = [
         {"role": "system", "content": (
-            "You are a file manager. You can only list simple steps in numbered order and separate lines "
-            "with the following choices used with given file names where relevant: 'list', 'create', 'delete', "
-            "'write', 'read', 'document_in_python', and 'remaining'. If comparing files, make sure to have steps "
-            "for reading each file prior to comparing. If list, assign each file name obtained to a "
-            "read step if read is requested. 'remaining' is any additional step not covered by the other steps "
-            "and you can print the full remaining step with 'remaining:' mentioned before rest of message. You "
-            "can print in step relevant file names as needed for each step. For 'remaining' step use tool 'remaining'."
+            "You are a file manager. You can only list with simple steps in numbered order and separate lines "
+            "with the following choices used with file names found where relevant: 'list', 'create', 'delete', "
+            "'write', 'read', 'document_in_python', and 'remaining'. If list, "
+            "assign each file name obtained to a read step if read is requested and use the appropriate extension "
+            "in list calls when needed [example '.py' for searching for python files]. 'remaining' is any "
+            "additional step not covered by the other steps and you can print the full remaining step with "
+            "'remaining:' mentioned before rest of message. You can print in step relevant file names as needed "
+            "for each step. For 'remaining' step use tool 'remaining'. Listed files will be stored in "
+            f"'{found_files_list}' for reference. Check that list before assigning file names to be read when needed."
+            "Document in python is only called when 'document in python' is specified by user. Don't start step "
+            "creation until step for listing files is completed."
         )
          },
         {"role": "user", "content": f"List the steps for the following: {user_input}"},
@@ -90,13 +95,15 @@ def file_management_request( user_input: str) -> List[dict[str, str]] | None:
     def list_files(extension: str | None = None) -> List[str]:
         """List all files with given extension in the current directory."""
         current_directory = os.getcwd()
+        print(current_directory)
         files = os.listdir(current_directory)
         if not extension:
             return files
         found_files = []
         for file_name in files:
-            if file_name.endswith(f".{extension}"):
+            if file_name.endswith(f"{extension}"):
                 found_files.append(file_name)
+                found_files_list.append(file_name)
         return found_files
 
     action_registry.register(Action(
