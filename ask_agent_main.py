@@ -89,10 +89,13 @@ def identify_agents(user_input: str) -> str:
             return returned_response
     raise AssertionError(f"Error: No agents available for usage.")
 
-def main():
+def main(user_input: str | None = None) -> str:
     """Main function"""
     # Perform a task
-    user_query = input("What would you like to ask?\n\n")
+    if user_input is None:
+        user_query = input("What would you like to ask?\n\n")
+    else:
+        user_query = user_input
 
     # Determine which agent to use
     agent_to_use = identify_agents(user_input=user_query)
@@ -100,6 +103,7 @@ def main():
     # Select agent operation
     if "file_management_agent" in agent_to_use:
         returned_result = file_management_agent.file_management_request(user_input=user_query)
+        return str(returned_result)
     else:
         raise AssertionError(f"Error: Could not select agent path to use.")
 
